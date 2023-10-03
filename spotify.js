@@ -1,10 +1,18 @@
 import express, { Router } from 'express'
 import axios from 'axios'
+import 'dotenv/config'
 const router = express.Router()
 
-var client_id = '8076849e45fc4800a3dc64683a839683'
-var client_secret = 'b0ffdc042f67457f9906c0be2767f1fa'
-var redirect_uri = 'http://localhost:5000/spotify/callback'
+
+
+var client_id = process.env.SPOTIFY_CLIENT_ID
+var client_secret = process.env.SPOTIFY_CLIENT_SECRET
+// Production
+// var redirect_uri = 'https://friends4ever.netlify.app/spotify-callback'
+// var root_domain = 'https://friends4ever-server.onrender.com'
+
+// Development
+var redirect_uri = 'http://localhost:5173/spotify-callback'
 var root_domain = 'http://localhost:5000'
 
 const generateRandomString = length => {
@@ -17,9 +25,8 @@ const generateRandomString = length => {
 }
 
 router.get('/login', (req,res) => {
-    console.log('tryin it?')
     const state = generateRandomString(16)
-    const scope = 'user-read-private user-read-email'
+    const scope = 'user-read-private user-read-email user-follow-read user-follow-modify user-library-modify user-library-read'
 
     const paramsObj = {
         client_id: client_id,
@@ -36,18 +43,71 @@ router.get('/login', (req,res) => {
 
 router.get('/callback', (req, res) => {
     const code = req.query.code || null
+    const state = req.query.state || null
+    console.log('CODE', code)
 
     const paramsObj = {
-        grant_type: 'authorization_code',
         code: code,
-        redirect_uri: redirect_uri
+        redirect_uri: redirect_uri,
+        grant_type: 'authorization_code'
     }
-
     const params = new URLSearchParams(paramsObj)
 
-    // GET USER ACCESS TOKEN
+    if(state === null) {
+        res.send({
+            message: 'error',
+            error: 'state_mismatch'
+        })
+    } else {
+        axios({
+            method: 'post',
+            url: 'https://accounts.spotify.com/api/token',
+            data: params.toString(),
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded',
+                Authorization: `Basic ${new Buffer.from(
+                    `${client_id}:${client_secret}`
+                ).toString('base64')}`
+            }
+        })
+            .then(response => {
+                console.log(response.status)
+                if (response.status === 200) {
+                    console.log('everything went well, store the refresh token and continue...')
+                    res.send({
+                        status: 200,
+                        message: 'success',
+                        data: response.data,
+                        note: 'TIME TO STORE THE REFRESH TOKEN'
+                    })
+                } else {
+                    console.log('something went... not so well')
+                }
+            })
+            .catch(error => {
+                console.log('error authorizing user')
+                res.send({
+                    status: 400,
+                    message: 'error authenticating user',
+                    data: error.response.data,
+                    note: 'PROBABLY BECAUSE THE ACCESS TOKEN WAS EXPIRED'
+                })
+            })
+    }
+})
+
+// Call this function when an existing user is revisitng
+router.get('/refresh', (req, res) => {
+    const { refresh_token } = req.query
+
+    const paramsObj = {
+        grant_type: 'refresh_token',
+        refresh_token: refresh_token
+    }
+    const params = new URLSearchParams(paramsObj)
+
     axios({
-        method: 'POST',
+        method: 'post',
         url: 'https://accounts.spotify.com/api/token',
         data: params.toString(),
         headers: {
@@ -58,57 +118,31 @@ router.get('/callback', (req, res) => {
         }
     })
         .then((response) => {
-            console.log('get access token', response.data)
+            console.log(response.status)
             if (response.status === 200) {
-                const { refresh_token } = response.data
-
-                axios.get(`${root_domain}/spotify/refresh?refresh_token=${refresh_token}`)
-                    .then(response => {
-                        console.log( 'get refresh token', response.data)
-                        const { access_token, token_type } = response.data
-
-                        // Get user information
-                        axios('https://api.spotify.com/v1/me', {
-                            headers: {
-                                Authorization: `${token_type} ${access_token}`
-                            }
-                        })
-                            .then(response => {
-                                console.log('get user information', response.data)
-                                res.send({
-                                    message: response.data
-                                })
-                            })
-                    })
+                res.send({
+                    status: 200,
+                    message: 'success',
+                    data: response.data,
+                    note: 'QUERY THAT USER'
+                })
             }
         })
-    })
+})
 
-    router.get('/refresh', (req, res) => {
-        const { refresh_token } = req.query
+router.get('/get-user', (req, res) => {
+    const { access_token, token_type } = req.query
 
-        const paramsObj = {
-            grant_type: 'refresh_token',
-            refresh_token: refresh_token
+    axios('https://api.spotify.com/v1/me', {
+        headers: {
+            Authorization: `${token_type} ${access_token}`
         }
-        const params = new URLSearchParams(paramsObj)
-
-        axios({
-            method: 'POST',
-            url: 'https://accounts.spotify.com/api/token',
-            data: params.toString(),
-            headers: {
-                'content-type': 'application/x-www-form-urlencoded',
-                Authorization: `Basic ${new Buffer.from(
-                    `${client_id}:${client_secret}`
-                ).toString('base64')}`
-            }
+    }).then(response => {
+        res.send({
+            status: 200,
+            message: 'success',
+            data: response.data
         })
-            .then((response) => {
-                res.send(response.data)
-            })
-            .catch((error => {
-                res.send(error)
-            }))
     })
+})
 export default router
