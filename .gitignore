@@ -11,7 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
-env
+
+# dotenv environment variables file
+.env
 
 # Editor directories and files
 .vscode/*
