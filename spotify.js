@@ -12,8 +12,8 @@ var client_secret = process.env.SPOTIFY_CLIENT_SECRET
 // var root_domain = 'https://friends4ever-server.onrender.com'
 
 // Development
-var redirect_uri = 'http://localhost:5173/spotify-callback'
-var root_domain = 'http://localhost:5000'
+var redirect_uri = process.env.SPOTIFY_REDIRECT_URI
+var root_domain = process.env.SPOTIFY_ROOT_DOMAIN
 
 const generateRandomString = length => {
     let text = ''
