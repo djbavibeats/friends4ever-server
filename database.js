@@ -14,7 +14,8 @@ const userSchema = new Schema({
     spotifyId: String,
     charms: [{
         name: String,
-        completed: Boolean
+        completed: Boolean,
+        description: String
     }],
     braceletConfig: {
         baseColor: String
@@ -89,11 +90,31 @@ router.post('/users/create-spotify-user', async (req, res) => {
         spotifyRefreshToken: req.body.spotifyRefreshToken,
         spotifyId: req.body.spotifyId,
         charms: [
-            { name: 'authentication', completed: true },
-            { name: 'playlist_creation', completed: false },
-            { name: 'geolocation', completed: false },
-            { name: 'listening_room', completed: false },
-            { name: 'itinerary', completed: false }
+            {
+                name: 'FOLLOW',
+                completed: true,
+                description: 'Follow Chase Atlantic on Spotify and pre-save "Single Name."'
+            },
+            {
+                name: 'LISTEN',
+                completed: false,
+                description: 'Host an exclusive "Mamacita" listening party for you and your bff.'
+            },
+            {
+                name: 'FIND',
+                completed: false,
+                description: 'Hit the streets and head to one of the digital drop points.'
+            },
+            {
+                name: 'CREATE',
+                completed: false,
+                description: 'Take a quick quiz to get a custom made playlist.'
+            },
+            {
+                name: 'CHASE',
+                completed: false,
+                description: 'Download an itinerary curated by Chase Atlantic.'
+            },
         ],
         braceletConfig: { 
             baseColor: '#bcc6cc' 
