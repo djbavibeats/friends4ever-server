@@ -3,6 +3,7 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import spotify from './spotify.js'
+import database from './database.js'
 
 dotenv.config()
 
@@ -21,6 +22,7 @@ app.get('/api', (req, res) => {
 })
 
 app.use('/spotify', spotify)
+app.use('/database', database)
 
 
 app.listen(PORT, () => {

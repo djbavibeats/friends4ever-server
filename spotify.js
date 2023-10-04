@@ -7,11 +7,6 @@ const router = express.Router()
 
 var client_id = process.env.SPOTIFY_CLIENT_ID
 var client_secret = process.env.SPOTIFY_CLIENT_SECRET
-// Production
-// var redirect_uri = 'https://friends4ever.netlify.app/spotify-callback'
-// var root_domain = 'https://friends4ever-server.onrender.com'
-
-// Development
 var redirect_uri = process.env.SPOTIFY_REDIRECT_URI
 var root_domain = process.env.SPOTIFY_ROOT_DOMAIN
 
@@ -44,7 +39,6 @@ router.get('/login', (req,res) => {
 router.get('/callback', (req, res) => {
     const code = req.query.code || null
     const state = req.query.state || null
-    console.log('CODE', code)
 
     const paramsObj = {
         code: code,
