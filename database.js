@@ -12,10 +12,9 @@ const userSchema = new Schema({
     authMethod: String,
     spotifyRefreshToken: String,
     spotifyId: String,
-    charms: [{
-        name: String,
-        completed: Boolean,
-        description: String
+    missions: [{
+        missionId: String,
+        completed: Boolean
     }],
     braceletConfig: {
         baseColor: String
@@ -24,12 +23,91 @@ const userSchema = new Schema({
 })
 const User = model('User', userSchema)
 
+const missionSchema = new Schema({
+    name: String,
+    available: Boolean,
+    description: String,
+    finishers: [{
+        userId: String,
+        displayName: String
+    }]
+})
+const Mission = model('Mission', missionSchema)
+
 mongoose.connect(url)
 
+router.post('/missions/create-mission', async (req, res) => {
+    const { name, available, description, finishers } = req.body
+    const mission = new Mission({
+        name: name,
+        available: available,
+        description: description,
+        finishers: finishers
+    })
+    
+    await mission.save()
+    res.send({
+        status: 200,
+        mission: mission
+    })
+})
+
+router.get('/missions/get-all-missions', async (req, res) => {
+    const missions = await Mission.find()
+    res.send({
+        status: 200,
+        missions: missions
+    })
+})
+
+router.post('/missions/update-mission-finishers', async (req, res) => {
+    const mission = await Mission.findOne({ _id: req.body.missionId })
+    const missionFinishers = mission.finishers
+
+    const user = await User.findOne({ _id: req.body.userId })
+    const userMissions = user.missions
+
+    const missionUser = await mission.finishers.filter(finisher => finisher.userId === req.body.userId)
+
+    if (missionUser.length !== 0) {
+        res.send({
+            status: 400,
+            message: 'User already finished this mission!',
+            mission: mission,
+            user: user
+        })
+    } else {
+        missionFinishers.push({
+            userId: req.body.userId
+        })
+        userMissions.push({
+            missionId: mission._id,
+            completed: true
+        })
+
+        const updateMission = await Mission.findOneAndUpdate(
+            { _id: req.body.missionId },
+            { finishers: missionFinishers }
+        )
+        const updateUser = await User.findOneAndUpdate(
+            { _id: req.body.userId },
+            { missions: userMissions }
+        )
+        res.send({
+            status: 200,
+            message: 'User and mission updated!',
+            mission: updateMission,
+            user: updateUser
+        })
+    }
+})
+
+router.post('/missions/save-mamacita', async (req, res) => {
+    console.log('save mamacita')
+})
 // await user.save()
 router.get('/users/get-spotify-user', async (req, res) => {
     const spotifyId = req.query.spotifyId || null
-    console.log(spotifyId)
     const user = await User.findOne({ spotifyId: spotifyId }).exec()
 
     console.log("User", user)
@@ -89,41 +167,11 @@ router.post('/users/create-spotify-user', async (req, res) => {
         authMethod: req.body.authMethod,
         spotifyRefreshToken: req.body.spotifyRefreshToken,
         spotifyId: req.body.spotifyId,
-        charms: [
-            {
-                name: 'FOLLOW',
-                completed: true,
-                description: 'Follow Chase Atlantic on Spotify and pre-save "Single Name."'
-            },
-            {
-                name: 'LISTEN',
-                completed: false,
-                description: 'Host an exclusive "Mamacita" listening party for you and your bff.'
-            },
-            {
-                name: 'FIND',
-                completed: false,
-                description: 'Hit the streets and head to one of the digital drop points.'
-            },
-            {
-                name: 'CREATE',
-                completed: false,
-                description: 'Take a quick quiz to get a custom made playlist.'
-            },
-            {
-                name: 'CHASE',
-                completed: false,
-                description: 'Download an itinerary curated by Chase Atlantic.'
-            },
-        ],
+        missions: [],
         braceletConfig: { 
             baseColor: '#bcc6cc' 
         }
-        
-
     })
-
-    // console.log(user)
 
     await user.save()
     res.send({
@@ -146,33 +194,7 @@ router.post('/users/create-email-user', async (req, res) => {
             authMethod: req.body.authMethod,
             spotifyRefreshToken: 'N/A',
             spotifyId: 'N/A',
-            charms: [
-                {
-                    name: 'FOLLOW',
-                    completed: true,
-                    description: 'Follow Chase Atlantic on Spotify and pre-save "Single Name."'
-                },
-                {
-                    name: 'LISTEN',
-                    completed: false,
-                    description: 'Host an exclusive "Mamacita" listening party for you and your bff.'
-                },
-                {
-                    name: 'FIND',
-                    completed: false,
-                    description: 'Hit the streets and head to one of the digital drop points.'
-                },
-                {
-                    name: 'CREATE',
-                    completed: false,
-                    description: 'Take a quick quiz to get a custom made playlist.'
-                },
-                {
-                    name: 'CHASE',
-                    completed: false,
-                    description: 'Download an itinerary curated by Chase Atlantic.'
-                },
-            ],
+            missions: [],
             braceletConfig: { 
                 baseColor: '#bcc6cc' 
             }
